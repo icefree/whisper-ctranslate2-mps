@@ -58,6 +58,10 @@ It has compatibility with x86-64 and AArch64/ARM64 CPU and integrates multiple b
 
 GPU execution requires the NVIDIA libraries cuBLAS 11.x and cuDNN 8.x to be installed on the system. Please refer to the [CTranslate2 documentation](https://opennmt.net/CTranslate2/installation.html)
 
+## Apple Metal / MPS
+
+Apple Silicon users can offload the model to the integrated GPU via Apple's Metal Performance Shaders backend. To enable it, install a CTranslate2 wheel that includes Metal support (available on macOS arm64 starting from version 4.6) and run the CLI with `--device mps`. The tool automatically selects an appropriate compute type for Metal (preferring `float16` when available). If Metal support is not available in your CTranslate2 installation the command will fall back with an explicit error message.
+
 By default the best hardware available is selected for inference. You can use the options `--device` and `--device_index` to control manually the selection.
     
 # Usage

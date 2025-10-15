@@ -1,6 +1,5 @@
 numpy
 faster-whisper>=1.2.0
-ctranslate2
+ctranslate2>=4.6.0
 tqdm
 sounddevice
-numpy

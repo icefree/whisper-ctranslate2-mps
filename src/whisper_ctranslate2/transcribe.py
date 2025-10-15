@@ -1,7 +1,9 @@
 import sys
+import warnings
 
 from typing import BinaryIO, List, NamedTuple, Optional, Union
 
+import ctranslate2
 import numpy as np
 import tqdm
 
@@ -56,6 +58,73 @@ class TranscriptionOptions(NamedTuple):
 
 
 class Transcribe:
+    @staticmethod
+    def _preferred_metal_compute_type(supported_types):
+        preference_order = [
+            "float16",
+            "float32",
+            "int8_float16",
+            "int8_float32",
+            "int8",
+            "int16",
+        ]
+
+        for compute_type in preference_order:
+            if compute_type in supported_types:
+                return compute_type
+
+        return sorted(supported_types)[0]
+
+    @staticmethod
+    def _resolve_device_and_compute_type(device: str, compute_type: str):
+        normalized_device = device
+        normalized_compute_type = compute_type
+
+        if device == "mps":
+            normalized_device = "metal"
+
+        if normalized_device == "metal":
+            try:
+                supported_types = set(
+                    ctranslate2.get_supported_compute_types("metal")
+                )
+            except Exception as exception:
+                raise RuntimeError(
+                    "Metal (MPS) device requested but this CTranslate2 installation "
+                    "was built without Metal support. Install a CTranslate2 wheel "
+                    "that includes Metal acceleration (macOS arm64)."
+                ) from exception
+
+            sorted_supported_types = sorted(supported_types)
+
+            if not sorted_supported_types:
+                raise RuntimeError(
+                    "Metal backend reported no supported compute types. "
+                    "Check your CTranslate2 installation."
+                )
+
+            if normalized_compute_type in {"default", "auto"}:
+                selected_type = Transcribe._preferred_metal_compute_type(
+                    supported_types
+                )
+                if normalized_compute_type != selected_type:
+                    warnings.warn(
+                        "Metal backend selected compute type '%s' for request '%s'."
+                        % (selected_type, compute_type)
+                    )
+                normalized_compute_type = selected_type
+            elif normalized_compute_type not in supported_types:
+                raise RuntimeError(
+                    "Compute type '%s' is not supported on the Metal backend. "
+                    "Supported values: %s"
+                    % (
+                        normalized_compute_type,
+                        ", ".join(sorted_supported_types),
+                    )
+                )
+
+        return normalized_device, normalized_compute_type
+
     def _get_colored_text(self, words):
         k_colors = [
             "\033[38;5;196m",
@@ -114,11 +183,15 @@ class Transcribe:
         batched: bool,
         batch_size: int = None,
     ):
+        normalized_device, normalized_compute_type = self._resolve_device_and_compute_type(
+            device, compute_type
+        )
+
         self.model = WhisperModel(
             model_path,
-            device=device,
+            device=normalized_device,
             device_index=device_index,
-            compute_type=compute_type,
+            compute_type=normalized_compute_type,
             cpu_threads=threads,
             download_root=cache_directory,
             local_files_only=local_files_only,
