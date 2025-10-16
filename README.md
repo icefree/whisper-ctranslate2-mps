@@ -58,6 +58,22 @@ It has compatibility with x86-64 and AArch64/ARM64 CPU and integrates multiple b
 
 GPU execution requires the NVIDIA libraries cuBLAS 11.x and cuDNN 8.x to be installed on the system. Please refer to the [CTranslate2 documentation](https://opennmt.net/CTranslate2/installation.html)
 
+## Apple Metal / MPS
+
+Apple Silicon users can offload the model to the integrated GPU via Apple's Metal Performance Shaders backend. When `--device mps` is selected the CLI routes execution through the PyTorch implementation that powers [AtomGradient/whisper-mps](https://github.com/AtomGradient/whisper-mps), so the original Whisper checkpoints are used instead of the CTranslate2 conversion. Install the optional dependencies with:
+
+```
+pip install openai-whisper
+```
+
+PyTorch wheels published by the `openai-whisper` package include MPS support on macOS 13+; alternatively follow the [official PyTorch instructions](https://pytorch.org/get-started/locally/) to obtain an MPS-enabled build.
+
+Additional notes for MPS execution:
+
+- Converted CTranslate2 model directories (`--model_directory`) are not compatible with the MPS backend. Use the original Whisper model names such as `small`, `medium.en`, etc.
+- Batched decoding (`--batched`) is not currently available on MPS.
+- A handful of CTranslate2-specific options (e.g. `--hotwords`) are ignored because they are not supported by the PyTorch implementation; the CLI will warn when this happens.
+
 By default the best hardware available is selected for inference. You can use the options `--device` and `--device_index` to control manually the selection.
     
 # Usage

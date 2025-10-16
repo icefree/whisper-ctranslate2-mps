@@ -158,6 +158,7 @@ class CommandLine:
                 "auto",
                 "cpu",
                 "cuda",
+                "mps",
             ],
             default="auto",
             help="device to use for CTranslate2 inference",
